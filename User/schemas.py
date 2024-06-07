@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field, field_validator
 import re
 
+class BaseResponseModel(BaseModel):
+    message: str
+    status: int
+
 class UserRegistrationSchema(BaseModel):
     user_name: str = Field(min_length=3, max_length=50, pattern="^[a-zA-Z0-9_-]+$", description="Username must be between 3 and 50 characters long and can contain letters, numbers, hyphens, and underscores.")
     password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
@@ -22,9 +26,6 @@ class UserLoginSchema(BaseModel):
     user_name: str = Field(min_length=3, max_length=50, pattern="^[a-zA-Z0-9_-]+$", description="Username must be between 3 and 50 characters long and can contain letters, numbers, hyphens, and underscores.")
     password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
 
-class UserResponseSchema(BaseModel):
-    id: int
-    user_name: str
-    first_name: str
-    last_name: str
-    is_verified: bool
+class UserResponseSchema(BaseResponseModel):
+    data: UserRegistrationSchema
+
