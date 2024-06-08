@@ -29,6 +29,7 @@ class User(Base):
     password: Mapped[str] = mapped_column(String(length = 250))
     first_name: Mapped[str] = mapped_column(String(length = 20))
     last_name:Mapped[str] = mapped_column(String(length = 20))
+    email: Mapped[str] = mapped_column(String(length = 100))
     is_verified: Mapped[bool] = mapped_column(Boolean, default = False) 
 
    

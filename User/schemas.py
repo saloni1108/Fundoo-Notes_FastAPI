@@ -10,6 +10,7 @@ class UserRegistrationSchema(BaseModel):
     password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
     first_name: str = Field(min_length=1, max_length=20, description="First name must be between 1 and 20 characters long.")
     last_name: str = Field(min_length=1, max_length=20, description="Last name must be between 1 and 20 characters long.")
+    email: str = Field(description = "THe Email entered should be valid")
 
     @field_validator('password')
     def validate_password(cls, v):
@@ -19,6 +20,13 @@ class UserRegistrationSchema(BaseModel):
             not re.search("[0-9]", v) or
             not re.search("[@$!%*?&]", v)):
             raise ValueError("Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.")
+        return v
+    
+    @field_validator('email')
+    def validate_email(cls, v):
+        email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email address")
         return v
     
 
