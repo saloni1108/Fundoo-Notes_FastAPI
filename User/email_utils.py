@@ -3,7 +3,7 @@ import ssl
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from Core.setting import settings
+from setting import settings
 
 def send_email(to_mail: str, mail_subject: str, mail_body: str):
     msg = EmailMessage()

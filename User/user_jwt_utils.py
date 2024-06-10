@@ -1,5 +1,5 @@
 import jwt
-from Core.setting import settings
+from setting import settings
 from datetime import datetime, timedelta
 from jwt import PyJWTError
 from fastapi import HTTPException

@@ -6,7 +6,7 @@ from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema
 from .password_utils import get_password_hash, verify_password
 from .user_jwt_utils import encoded_user_jwt, decoded_user_jwt, Audience
 from .email_utils import send_email
-from Core.setting import settings
+from setting import settings
 from smtplib import SMTPAuthenticationError
 
 app = FastAPI()

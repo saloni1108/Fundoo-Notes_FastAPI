@@ -5,7 +5,7 @@ from sqlalchemy.orm import DeclarativeBase, declarative_base, sessionmaker
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
-from Core.setting import settings
+from setting import settings
 
 engine = create_engine(url = settings.DB_URL)
 
