@@ -3,9 +3,7 @@ from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import SQLAlchemyError
 from .models import User, get_db_session
 from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema, BaseResponseModel
-from .password_utils import get_password_hash, verify_password
-from .user_jwt_utils import encoded_user_jwt, decoded_user_jwt, Audience
-from .email_utils import send_email
+from .utils import get_password_hash, verify_password, encoded_user_jwt, decoded_user_jwt, Audience, send_email
 from setting import settings
 from smtplib import SMTPAuthenticationError
 
