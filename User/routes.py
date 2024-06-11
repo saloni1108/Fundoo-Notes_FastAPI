@@ -43,7 +43,7 @@ def register_user(user: UserRegistrationSchema, db: Session = Depends(get_db_ses
     
     return {"message": "User registered successfully", "status": 201, "data": new_user}
 
-@app.post('/login', response_model=BaseResponseModel)
+@app.post('/login')
 def login(user: UserLoginSchema, db: Session = Depends(get_db_session)):
     db_user = db.query(User).filter(User.user_name == user.user_name).first()
     if not db_user or not verify_password(user.password, db_user.password):
