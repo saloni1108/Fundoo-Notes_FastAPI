@@ -3,9 +3,7 @@ from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import SQLAlchemyError
 from .models import User, get_db_session
 from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema, BaseResponseModel
-from .password_utils import get_password_hash, verify_password
-from .user_jwt_utils import encoded_user_jwt, decoded_user_jwt, Audience
-from .email_utils import send_email
+from .utils import get_password_hash, verify_password, encoded_user_jwt, decoded_user_jwt, Audience, send_email
 from setting import settings
 from smtplib import SMTPAuthenticationError
 
@@ -38,7 +36,6 @@ def register_user(user: UserRegistrationSchema, db: Session = Depends(get_db_ses
         db.rollback()
         raise HTTPException(status_code=500, detail="An error occurred while creating the user")
     except SMTPAuthenticationError as e:
-        # return {"message": "Failed to send the mail: {e}", "status": 400}
         raise HTTPException(status_code=500, detail= str(e))
     
     return {"message": "User registered successfully", "status": 201, "data": new_user}
@@ -48,6 +45,8 @@ def login(user: UserLoginSchema, db: Session = Depends(get_db_session)):
     db_user = db.query(User).filter(User.user_name == user.user_name).first()
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="Invalid username or password")
+    if not db_user.is_verified:
+        raise HTTPException(status_code = 400, detail = "User not found")
     access_token = encoded_user_jwt({"user_id": db_user.id, "aud": Audience.login.value})
     return {"message": "User Logged In Successfully", "status": 200, "token": access_token}
 
