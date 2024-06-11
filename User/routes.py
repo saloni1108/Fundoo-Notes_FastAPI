@@ -66,9 +66,18 @@ def verify_user(token: str, db: Session = Depends(get_db_session)):
         raise HTTPException(status_code = 401, detail = "User not found and verified") 
     
 
-@app.get("/fetchUser", response_model = UserSchema, status_code = status.HTTP_200_OK, include_in_schema = False)
+@app.get("/fetchUser", response_model=UserSchema, status_code=status.HTTP_200_OK, include_in_schema=False)
 def fetch_user(token: str, db: Session = Depends(get_db_session)):
-    payload = decoded_user_jwt(token = token, audience = Audience.login.value)
-    user_id = payload.get("user_id")
-    user = db.query(User).where(User.id == user_id).first()
-    return user    
+    try:
+        payload = decoded_user_jwt(token=token, audience=Audience.login.value)
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=400, detail="Invalid token: user ID not found")
+        user = db.query(User).where(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail="Database error: " + str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid token: " + str(e)) 

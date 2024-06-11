@@ -12,6 +12,8 @@ class NotesCreationSchema(BaseModel):
     description: str
     color: str
     reminder: Optional[datetime]
+    is_archive: Optional[bool] = False
+    is_trash: Optional[bool] = False
     user_id: int
 
 

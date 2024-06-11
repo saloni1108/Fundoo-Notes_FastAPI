@@ -15,8 +15,12 @@ def add_note(note: NotesCreationSchema, request: Request, db: Session = Depends(
         title=note.title,
         description=note.description,
         color=note.color,
+        is_archive = note.is_archive,
+        is_trash = note.is_trash,
         user_id= request.state.user_id
     )
+    if not new_note:
+        raise HTTPException(detail="error")
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
@@ -50,3 +54,40 @@ def delete_note(request: Request, note_id: int, db: Session = Depends(get_db_ses
     db.delete(note)
     db.commit()
     return {"message": "Note deleted successully", "status": 200}
+
+
+@app.patch("/notes/{note_id}/archive", response_model = NotesResponseSchema)
+def archive_note(request: Request, note_id: int, archive: bool, db: Session = Depends(get_db_session)):
+    note = db.query(Notes).filter(Notes.id == note_id, Notes.user_id == request.state.user_id).first()
+    if not note:
+        raise HTTPException(detail = "Note Not Found", status_code = 400)
+    note.is_archive = archive
+    db.commit()
+    db.refresh(note)
+    status = "Archived" if archive else "Unarchived"
+    return {"message": f"Note {status} Successfully", "status": 200, "data": note}
+
+@app.patch("/notes/{note_id}/trash", response_model = NotesResponseSchema)
+def archive_note(request: Request, note_id: int, trash: bool, db: Session = Depends(get_db_session)):
+    note = db.query(Notes).filter(Notes.id == note_id, Notes.user_id == request.state.user_id).first()
+    if not note:
+        raise HTTPException(detail = "Note Not Found", status_code = 400)
+    note.is_trash = trash
+    db.commit()
+    db.refresh(note)
+    status = "Trashed" if trash else "Present"
+    return {"message": f"Note {status} Successfully", "status": 200, "data": note}
+
+@app.get('/notes/getArchive', response_model=List[NotesCreationSchema])
+def get_archive_notes(request: Request, db: Session = Depends(get_db_session)):
+    notes = db.query(Notes).filter(Notes.user_id == request.state.user_id, Notes.is_archive == True).all()
+    if not notes:
+        raise HTTPException(status_code=404, detail="No notes found")
+    return notes
+
+@app.get('/notes/getTrash', response_model=List[NotesCreationSchema])
+def get_trash_notes(request: Request, db: Session = Depends(get_db_session)):
+    notes = db.query(Notes).filter(Notes.user_id == request.state.user_id, Notes.is_trash == True).all()
+    if not notes:
+        raise HTTPException(status_code=404, detail="No notes found")
+    return notes
