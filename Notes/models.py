@@ -29,7 +29,7 @@ class Notes(Base):
     title:Mapped[str] = mapped_column(String(length = 50))
     description: Mapped[str] = mapped_column(String(length = 500))
     color: Mapped[str] = mapped_column(String(length = 20))
-    reminder:Mapped[datetime] = mapped_column(DateTime, nullable = True)
+    reminder:Mapped[datetime] = mapped_column(DateTime, nullable = True, )
     is_archive: Mapped[bool] = mapped_column(Boolean, default = False)
     is_trash: Mapped[bool] = mapped_column(Boolean, default = False) 
     user_id: Mapped[int] = mapped_column(BigInteger, nullable= False)

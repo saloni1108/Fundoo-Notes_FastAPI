@@ -7,6 +7,7 @@ class BaseResponseModel(BaseModel):
     status: int
 
 class NotesCreationSchema(BaseModel):
+    id: int
     title: str
     description: str
     color: str

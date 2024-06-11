@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import SQLAlchemyError
 from .models import User, get_db_session
-from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema, BaseResponseModel
+from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema, BaseResponseModel, UserSchema
 from .utils import get_password_hash, verify_password, encoded_user_jwt, decoded_user_jwt, Audience, send_email
 from setting import settings
 from smtplib import SMTPAuthenticationError
@@ -65,3 +65,10 @@ def verify_user(token: str, db: Session = Depends(get_db_session)):
     except:
         raise HTTPException(status_code = 401, detail = "User not found and verified") 
     
+
+@app.get("/fetchUser", response_model = UserSchema, status_code = status.HTTP_200_OK, include_in_schema = False)
+def fetch_user(token: str, db: Session = Depends(get_db_session)):
+    payload = decoded_user_jwt(token = token, audience = Audience.login.value)
+    user_id = payload.get("user_id")
+    user = db.query(User).where(User.id == user_id).first()
+    return user    
