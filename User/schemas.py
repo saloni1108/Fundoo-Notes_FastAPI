@@ -1,5 +1,9 @@
 from pydantic import BaseModel, Field, field_validator
 import re
+import loggers
+
+log_file = "fundoo_notes.log"
+logger = loggers.setup_logger(log_file)
 
 class BaseResponseModel(BaseModel):
     message: str
@@ -19,6 +23,7 @@ class UserRegistrationSchema(BaseModel):
             not re.search("[A-Z]", v) or
             not re.search("[0-9]", v) or
             not re.search("[@$!%*?&]", v)):
+            logger.exception("Password incorrect")
             raise ValueError("Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.")
         return v
     
@@ -26,6 +31,7 @@ class UserRegistrationSchema(BaseModel):
     def validate_email(cls, v):
         email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
         if not re.match(email_regex, v):
+            logger.exception("Invalid Email")
             raise ValueError("Invalid email address")
         return v
 

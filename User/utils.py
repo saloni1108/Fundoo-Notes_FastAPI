@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 from jwt import PyJWTError
 from fastapi import HTTPException
 from enum import Enum
+import loggers
+
+log_file = "fundoo_notes.log"
+logger = loggers.setup_logger(log_file)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
