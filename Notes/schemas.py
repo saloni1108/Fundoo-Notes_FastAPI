@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class BaseResponseModel(BaseModel):
     message: str
@@ -19,3 +19,6 @@ class NotesCreationSchema(BaseModel):
 
 class NotesResponseSchema(BaseResponseModel):
     data: NotesCreationSchema
+
+class NotesResponseModel(BaseResponseModel):
+    data: List[NotesCreationSchema]
