@@ -28,12 +28,14 @@ class UserRegistrationSchema(BaseModel):
         if not re.match(email_regex, v):
             raise ValueError("Invalid email address")
         return v
-    
+
+class UserSchema(UserRegistrationSchema):
+    id: int   
 
 class UserLoginSchema(BaseModel):
     user_name: str = Field(min_length=3, max_length=50, pattern="^[a-zA-Z0-9_-]+$", description="Username must be between 3 and 50 characters long and can contain letters, numbers, hyphens, and underscores.")
     password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
 
 class UserResponseSchema(BaseResponseModel):
-    data: UserRegistrationSchema
+    data: UserSchema
 
