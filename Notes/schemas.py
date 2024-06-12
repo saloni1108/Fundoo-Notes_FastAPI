@@ -22,3 +22,14 @@ class NotesResponseSchema(BaseResponseModel):
 
 class NotesResponseModel(BaseResponseModel):
     data: List[NotesCreationSchema]
+
+class LabelsCreationSchema(BaseModel):
+    id: int
+    label_name: str
+    user_id: int
+
+class LabelsResponseSchema(BaseResponseModel):
+    data: LabelsCreationSchema
+
+class LabelsResponse(BaseResponseModel):
+    data: List[LabelsCreationSchema]

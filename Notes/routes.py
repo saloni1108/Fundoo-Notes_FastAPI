@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Security, Request
-from .models import Base, Notes, get_db_session
-from .schemas import BaseResponseModel, NotesCreationSchema, NotesResponseSchema, NotesResponseModel
+from .models import Base, Notes, Labels, get_db_session
+from .schemas import BaseResponseModel, NotesCreationSchema, NotesResponseSchema, NotesResponseModel, LabelsCreationSchema, LabelsResponseSchema, LabelsResponse
 from sqlalchemy.orm import Session
 from typing import List
 from fastapi.security import APIKeyHeader
@@ -91,3 +91,45 @@ def get_trash_notes(request: Request, db: Session = Depends(get_db_session)):
     if not notes:
         raise HTTPException(status_code=404, detail="No notes found")
     return {"message": "Notes Deleted Successfully", "status": 200, "data": notes}
+
+
+@app.post('/labelcreate', response_model=LabelsResponseSchema)
+def add_label(label: LabelsCreationSchema, request: Request, db: Session = Depends(get_db_session)):
+    new_label = Labels(
+        label_name = label.label_name,
+        user_id = request.state.user_id
+    )
+    if not new_label:
+        raise HTTPException(detail="error")
+    db.add(new_label)
+    db.commit()
+    db.refresh(new_label)
+    return {"message": "Label Created Successfully", "status": 200, "data": label}
+
+@app.get('/labels/', response_model=LabelsResponse)
+def get_labels(request: Request, db: Session = Depends(get_db_session)):
+    label = db.query(Labels).filter(Labels.user_id == request.state.user_id).all()
+    if not label:
+        raise HTTPException(status_code=404, detail="No notes found")
+    return {"message": "Labels Retrieved Successfully", "status": 200, "data": label}
+
+@app.put('/labels/{label_id}', response_model=LabelsResponseSchema)
+def update_note(request: Request, label_id: int, label_payload: LabelsCreationSchema, db: Session = Depends(get_db_session)):
+    label = db.query(Labels).filter(Labels.user_id == request.state.user_id, Labels.id == label_id).first()
+    if not label:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    label.label_name = label_payload.label_name
+    db.commit()
+    db.refresh(label)
+    return {"message": "Label Updated Successfully", "status": 200, "data":  label}
+
+@app.delete('/labels/{label_id}', response_model=BaseResponseModel)
+def delete_note(request: Request, label_id: int, db: Session = Depends(get_db_session)):
+    label = db.query(Labels).filter(Labels.id == label_id, Labels.user_id == request.state.user_id).first()
+    if not label:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    db.delete(label)
+    db.commit()
+    return {"message": "Label deleted successully", "status": 200}
