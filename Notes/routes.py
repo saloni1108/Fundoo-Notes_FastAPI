@@ -1,13 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException, Security, Request
+from fastapi import FastAPI, Depends, HTTPException, Security, Request, status
 from .models import Base, Notes, Labels, get_db_session
 from .schemas import BaseResponseModel, NotesCreationSchema, NotesResponseSchema, NotesResponseModel, LabelsCreationSchema, LabelsResponseSchema, LabelsResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from typing import List
 from fastapi.security import APIKeyHeader
 from .utils import auth_user
 import loggers
+from Core import create_app
 
-app = FastAPI(dependencies = [Security(APIKeyHeader(name = "Authorization")), Depends(auth_user)])
+app = create_app(name = "notes", dependencies = [Security(APIKeyHeader(name = "Authorization")), Depends(auth_user)])
 
 log_file = "fundoo_notes.log"
 logger = loggers.setup_logger(log_file)
@@ -25,12 +27,16 @@ def add_note(note: NotesCreationSchema, request: Request, db: Session = Depends(
     )
     if not new_note:
         logger.exception(msg = "There was an Exception that occured while creating the note for")
-        raise HTTPException(detail="error")
-    db.add(new_note)
-    db.commit()
-    db.refresh(new_note)
-    logger.info("Note created successfully...")
-    return {"message": "Note Created Successfully", "status": 200, "data": new_note}
+        raise HTTPException(status_code =  status.HTTP_404_NOT_FOUND, detail = "Note Not Found")
+    try:
+        db.add(new_note)
+        db.commit()
+        db.refresh(new_note)
+        logger.info("Note created successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
+    return {"message": "Note Created Successfully", "status": status.HTTP_201_CREATED, "data": new_note}
 
 @app.get('/notes/', response_model=NotesResponseModel)
 def get_notes(request: Request, db: Session = Depends(get_db_session)):
@@ -38,7 +44,7 @@ def get_notes(request: Request, db: Session = Depends(get_db_session)):
     notes = db.query(Notes).filter(Notes.user_id == request.state.user_id).all()
     if not notes:
         logger.exception(msg = "There was an Exception that occured while reading the note")
-        raise HTTPException(status_code=404, detail="No notes found")
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = "No Notes Found")
     logger.info("Note read successfully...")
     return {"message": "Notes Retrieved Successfully", "status": 200, "data": notes}
 
@@ -48,13 +54,17 @@ def update_note(request: Request, note_id: int, note_payload: NotesCreationSchem
     note = db.query(Notes).filter(Notes.user_id == request.state.user_id, Notes.id == note_id).first()
     if not note:
         logger.exception(msg = "There was an Exception that occured while updating")
-        raise HTTPException(status_code=404, detail="Note not found")
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail="Note not found")
     
     note.title = note_payload.title
     note.description = note_payload.description
-    db.commit()
-    db.refresh(note)
-    logger.info("Note updated successfully...")
+    try:
+        db.commit()
+        db.refresh(note)
+        logger.info("Note updated successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e)) 
     return {"message": "Note Updated Successfully", "status": 200, "data":  note}
 
 @app.delete('/notes/{note_id}', response_model=BaseResponseModel)
@@ -63,11 +73,15 @@ def delete_note(request: Request, note_id: int, db: Session = Depends(get_db_ses
     note = db.query(Notes).filter(Notes.id == note_id, Notes.user_id == request.state.user_id).first()
     if not note:
         logger.exception(msg = "There was an Exception that occured while deleting the note")
-        raise HTTPException(status_code=404, detail="Note not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
     
-    db.delete(note)
-    db.commit()
-    logger.info("Note deleted successfully...")
+    try:
+        db.delete(note)
+        db.commit()
+        logger.info("Note deleted successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
     return {"message": "Note deleted successully", "status": 200}
 
 
@@ -79,10 +93,15 @@ def archive_note(request: Request, note_id: int, archive: bool, db: Session = De
         logger.exception(msg = "There was an Exception that occured while archiving the note")
         raise HTTPException(detail = "Note Not Found", status_code = 404)
     note.is_archive = archive
-    db.commit()
-    db.refresh(note)
-    status = "Archived" if archive else "Unarchived"
-    logger.info("Note archived successfully...")
+
+    try:
+        db.commit()
+        db.refresh(note)
+        status = "Archived" if archive else "Unarchived"
+        logger.info("Note archived successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
     return {"message": f"Note {status} Successfully", "status": 200, "data": note}
 
 @app.patch("/notes/{note_id}/trash", response_model = NotesResponseSchema)
@@ -93,10 +112,14 @@ def trash_note(request: Request, note_id: int, trash: bool, db: Session = Depend
         logger.exception(msg = "There was an Exception that occured while trashing the note")
         raise HTTPException(detail = "Note Not Found", status_code = 404)
     note.is_trash = trash
-    db.commit()
-    db.refresh(note)
-    status = "Trashed" if trash else "Present"
-    logger.info("Note Trashed successfully...")
+    try:
+        db.commit()
+        db.refresh(note)
+        status = "Trashed" if trash else "Present"
+        logger.info("Note Trashed successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
     return {"message": f"Note {status} Successfully", "status": 200, "data": note}
 
 @app.get('/notes/getArchive', response_model= NotesResponseModel)
@@ -130,10 +153,14 @@ def add_label(label: LabelsCreationSchema, request: Request, db: Session = Depen
     if not new_label:
         logger.exception(msg = "There was an Exception that occured while creating the label")
         raise HTTPException(detail="error")
-    db.add(new_label)
-    db.commit()
-    db.refresh(new_label)
-    logger.info("Label created successfully...")
+    try:
+        db.add(new_label)
+        db.commit()
+        db.refresh(new_label)
+        logger.info("Label created successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
     return {"message": "Label Created Successfully", "status": 200, "data": label}
 
 @app.get('/labels/', response_model=LabelsResponse)
@@ -155,9 +182,13 @@ def update_note(request: Request, label_id: int, label_payload: LabelsCreationSc
         raise HTTPException(status_code=404, detail="Note not found")
     
     label.label_name = label_payload.label_name
-    db.commit()
-    db.refresh(label)
-    logger.info("Label updated successfully...")
+    try:
+        db.commit()
+        db.refresh(label)
+        logger.info("Label updated successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
     return {"message": "Label Updated Successfully", "status": 200, "data":  label}
 
 @app.delete('/labels/{label_id}', response_model=BaseResponseModel)
@@ -168,7 +199,57 @@ def delete_note(request: Request, label_id: int, db: Session = Depends(get_db_se
         logger.exception(msg = "There was an Exception that occured while deleting the label")
         raise HTTPException(status_code=404, detail="Note not found")
     
-    db.delete(label)
-    db.commit()
-    logger.info("Label deleted successfully...")
+    try:
+        db.delete(label)
+        db.commit()
+        logger.info("Label deleted successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
     return {"message": "Label deleted successully", "status": 200}
+
+@app.post('/notes/{note_id}/labels/{label_id}', response_model = BaseResponseModel)
+def add_label_to_note(request: Request, note_id: int, label_id: int, db: Session = Depends(get_db_session)):
+    logger.info("Adding Label %s to Note %s for the User: %s", label_id, note_id, request.state.user_id)
+    note = db.query(Notes).filter(Notes.user_id == request.state.user_id, Notes.id == note_id).first()
+    label = db.query(Labels).filter(Labels.user_id == request.state.user_id, Labels.id == label_id).first()
+
+    if not note or not label:
+        logger.exception(msg="There was an Exception that occurred while adding label to note")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note or Label not found")
+
+    if label not in note.labels:
+        note.labels.append(label)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Label already associated with note")
+
+    try:
+        db.commit()
+        logger.info("Label added to note successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return {"message": "Label added to note successfully", "status": 200}
+
+@app.delete('/notes/{note_id}/labels/{label_id}', response_model=BaseResponseModel)
+def remove_label_from_note(request: Request, note_id: int, label_id: int, db: Session = Depends(get_db_session)):
+    logger.info("Removing Label from Note for the User: %s", request.state.user_id)
+    note = db.query(Notes).filter(Notes.user_id == request.state.user_id, Notes.id == note_id).first()
+    label = db.query(Labels).filter(Labels.user_id == request.state.user_id, Labels.id == label_id).first()
+
+    if not note or not label:
+        logger.exception(msg="There was an Exception that occurred while removing label from note")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note or Label not found")
+
+    if label in note.labels:
+        note.labels.remove(label)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Label not associated with note")
+
+    try:
+        db.commit()
+        logger.info("Label removed from note successfully...")
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return {"message": "Label removed from note successfully", "status": 200}

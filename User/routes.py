@@ -7,8 +7,9 @@ from .utils import get_password_hash, verify_password, encoded_user_jwt, decoded
 from setting import settings
 from smtplib import SMTPAuthenticationError
 import loggers
+from Core import create_app
 
-app = FastAPI()
+app = create_app(name = "user")
 
 log_file = "fundoo_notes.log"
 logger = loggers.setup_logger(log_file)

@@ -33,3 +33,7 @@ class LabelsResponseSchema(BaseResponseModel):
 
 class LabelsResponse(BaseResponseModel):
     data: List[LabelsCreationSchema]
+
+class NoteLabelResponseSchema(BaseModel):
+    note_id: int
+    label_id: int
