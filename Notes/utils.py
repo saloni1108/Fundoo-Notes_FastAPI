@@ -55,19 +55,19 @@ class RedisManager:
             logger.error("Serialized payload is empty")
             raise ValueError("Serialized payload is empty")
 
-        cls.client.hset(name=user_id, key=note_id, value=serialized_payload)
+        cls.client.hset(name=f"user_{user_id}", key=f"notes_{note_id}", value=serialized_payload)
 
     @classmethod
     def retrieve(cls, user_id, note_id=None):
         try:
             if note_id:
-                data = cls.client.hget(name=user_id, key=note_id)
+                data = cls.client.hget(name=f"user_{user_id}", key=f"notes_{note_id}")
                 if data:
                     return json.loads(data)
                 else:
                     return None
             else:
-                data = cls.client.hgetall(name=user_id)
+                data = cls.client.hgetall(name=f"user_{user_id}")
                 if data:
                     return {key.decode(): json.loads(value) for key, value in data.items()}
                 else:
@@ -82,7 +82,7 @@ class RedisManager:
     @classmethod
     def delete(cls, user_id, note_id):
         try:
-            result = cls.client.hdel(user_id, note_id)
+            result = cls.client.hdel(f"user_{user_id}", f"notes_{note_id}")
             if result:
                 print(f"Note with id {note_id} deleted successfully for user_id {user_id}")
                 return True

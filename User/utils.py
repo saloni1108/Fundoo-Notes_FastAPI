@@ -41,6 +41,7 @@ def send_email(to_mail: str, mail_subject: str, mail_body: str):
 class Audience(Enum):
     register = "register_user"
     login = "login_user"
+    reset_password = "reset_password_user"
 
 def encoded_user_jwt(payload: dict):
     if "exp" not in payload:

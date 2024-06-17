@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import SQLAlchemyError
 from .models import User, get_db_session
-from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema, BaseResponseModel, UserSchema
+from .schemas import UserRegistrationSchema, UserLoginSchema, UserResponseSchema, BaseResponseModel, UserSchema, ForgotPasswordSchema, ResetPasswordSchema
 from .utils import get_password_hash, verify_password, encoded_user_jwt, decoded_user_jwt, Audience, send_email
 from setting import settings
 from smtplib import SMTPAuthenticationError
@@ -103,3 +103,48 @@ def fetch_user(token: str, db: Session = Depends(get_db_session)):
     except Exception as e:
         logger.exception(str(e))
         raise HTTPException(status_code=400, detail="Invalid token: " + str(e)) 
+    
+@app.post('/forgot-password', response_model=BaseResponseModel)
+def forgot_password(user: ForgotPasswordSchema, db: Session = Depends(get_db_session)):
+    logger.info("Processing Forgot password Request...")
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user:
+        logger.exception("Email not Found")
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    reset_token = encoded_user_jwt({"user_id": db_user.id, "aud": Audience.reset_password.value})
+    try:
+        send_email(to_mail = db_user.email, mail_subject = "Password Reset Request", mail_body = f"Hello {db_user.first_name},\n\nPlease use the following link to reset your password:\n\n127.0.0.1:8000/reset-password?token={reset_token}\n\nBest regards,\nFastAPI Team")
+        logger.info("Password reset email sent")
+        return {"message": "Password reset mail sent successfully", "status": 200}
+    except SMTPAuthenticationError as e:
+        logger.exception(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+    
+@app.post('/reset-password', response_model=BaseResponseModel)
+def reset_password(token: str, new_password: ResetPasswordSchema, db: Session = Depends(get_db_session)):
+    logger.info("Resetting the user's password")
+    try:
+        payload = decoded_user_jwt(token=token, audience=Audience.reset_password.value)
+        user_id = payload.get("user_id")
+        
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            logger.exception("User not found")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        hashed_password = get_password_hash(new_password.password)
+        user.password = hashed_password
+        db.commit()
+        
+        logger.info("Password reset successfully")
+        return {"message": "Password reset successfully", "status": 200}
+    except SQLAlchemyError as e:
+        logger.exception(str(e))
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error: " + str(e))
+    except Exception as e:
+        logger.exception(str(e))
+        raise HTTPException(status_code=400, detail="Invalid token: " + str(e))

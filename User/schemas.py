@@ -45,3 +45,27 @@ class UserLoginSchema(BaseModel):
 class UserResponseSchema(BaseResponseModel):
     data: UserSchema
 
+class ForgotPasswordSchema(BaseModel):
+    email: str = Field(description="The email associated with the user account")
+
+    @field_validator('email')
+    def validate_email(cls, v):
+        email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+        if not re.match(email_regex, v):
+            logger.exception("Invalid Email")
+            raise ValueError("Invalid email address")
+        return v
+
+class ResetPasswordSchema(BaseModel):
+    password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
+
+    @field_validator('password')
+    def validate_password(cls, v):
+        if (len(v) < 8 or
+            not re.search("[a-z]", v) or
+            not re.search("[A-Z]", v) or
+            not re.search("[0-9]", v) or
+            not re.search("[@$!%*?&]", v)):
+            logger.exception("Password incorrect")
+            raise ValueError("Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.")
+        return v
