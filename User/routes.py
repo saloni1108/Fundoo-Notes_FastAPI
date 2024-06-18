@@ -120,11 +120,9 @@ def forgot_password(user: ForgotPasswordSchema, db: Session = Depends(get_db_ses
     except SMTPAuthenticationError as e:
         logger.exception(str(e))
         raise HTTPException(status_code=500, detail=str(e))
-
-
     
 @app.post('/reset-password', response_model=BaseResponseModel)
-def reset_password(token: str, new_password: ResetPasswordSchema, db: Session = Depends(get_db_session)):
+def reset_password(token: str, password: ResetPasswordSchema, db: Session = Depends(get_db_session)):
     logger.info("Resetting the user's password")
     try:
         payload = decoded_user_jwt(token=token, audience=Audience.reset_password.value)
@@ -135,12 +133,13 @@ def reset_password(token: str, new_password: ResetPasswordSchema, db: Session = 
             logger.exception("User not found")
             raise HTTPException(status_code=404, detail="User not found")
         
-        hashed_password = get_password_hash(new_password.password)
-        user.password = hashed_password
-        db.commit()
-        
-        logger.info("Password reset successfully")
-        return {"message": "Password reset successfully", "status": 200}
+        if password.new_password == password.confirm_password:
+            hashed_password = get_password_hash(password.new_password)
+            user.password = hashed_password
+            db.commit()
+            
+            logger.info("Password reset successfully")
+            return {"message": "Password reset successfully", "status": 200}
     except SQLAlchemyError as e:
         logger.exception(str(e))
         db.rollback()

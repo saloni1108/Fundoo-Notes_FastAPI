@@ -57,9 +57,10 @@ class ForgotPasswordSchema(BaseModel):
         return v
 
 class ResetPasswordSchema(BaseModel):
-    password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
+    new_password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
+    confirm_password: str = Field(min_length=8, max_length=250, description="Password must be between 8 and 250 characters long.")
 
-    @field_validator('password')
+    @field_validator('new_password')
     def validate_password(cls, v):
         if (len(v) < 8 or
             not re.search("[a-z]", v) or
